@@ -1,0 +1,133 @@
+if not game:IsLoaded() then
+    game.Loaded:Wait()
+end
+
+local Players = game:GetService("Players")
+
+local player = Players.LocalPlayer
+while not player do
+    task.wait(0.5)
+    player = Players.LocalPlayer
+end
+
+player:WaitForChild("Data", 9e9)
+player.Data:WaitForChild("Level", 9e9)
+
+local WebhookURL = getgenv().urlwhscrolls
+local UpdateInterval = getgenv().timechscrolls or 60
+
+local HttpService = game:GetService("HttpService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Stats = game:GetService("Stats")
+
+local FileName = "LeviID_" .. player.Name .. ".txt"
+local MessageID = nil 
+
+if isfile and isfile(FileName) then
+    MessageID = readfile(FileName)
+end
+
+local startTime = os.time()
+local CommF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
+
+local function Format(n)
+    return tostring(n):reverse():gsub("...","%0,",(#tostring(n)-1)/3):reverse()
+end
+
+local function GetItem(name)
+    local c = 0
+    pcall(function()
+        local inv = CommF:InvokeServer("getInventory")
+        for _, v in pairs(inv or {}) do 
+            if v.Name == name or v.Name == name:gsub("Mythic","Mythical"):gsub("Legend","Legendary") then 
+                c = v.Count break 
+            end 
+        end
+    end)
+    return c
+end
+
+local function Send()
+    local fps = math.floor(workspace:GetRealPhysicsFPS())
+    local ping = "0"
+    pcall(function()
+        ping = string.split(Stats.Network.ServerStatsItem["Data Ping"]:GetValueString(), " ")[1]
+    end)
+    
+    local level, beli, frag = 0, 0, 0
+    pcall(function()
+        level = player.Data.Level.Value
+        beli = player.Data.Beli.Value
+        frag = player.Data.Fragments.Value
+    end)
+    
+    local data = {
+        ["embeds"] = {{
+            ["title"] = "Blox Fruits Status",
+            ["description"] = "**Người chơi:** `" .. player.Name .. "`\n**ID:** `" .. player.UserId .. "`\n━━━━━━━━━━━━━━━━━━━━━━━━",
+            ["color"] = 0x2b2d31,
+            ["fields"] = {
+                {
+                    ["name"] = "🖥️ HỆ THỐNG",
+                    ["value"] = "> 🎮 **FPS:** `" .. fps .. "`\n> 📊 **Ping:** `" .. ping .. "ms`\n> ⏳ **Treo:** `" .. os.date("!%H:%M:%S", os.time() - startTime) .. "`",
+                    ["inline"] = true
+                },
+                {
+                    ["name"] = "👤 NHÂN VẬT",
+                    ["value"] = "> ⭐ **Level:** `" .. Format(level) .. "`\n> 💵 **Beli:** `" .. Format(beli) .. "`\n> 🟣 **Frag:** `" .. Format(frag) .. "`",
+                    ["inline"] = true
+                },
+                {
+                    ["name"] = "📦 KHO ĐỒ VẬT PHẨM",
+                    ["value"] = "━━━━━━━━━━━━━━━━━━━━━━━━\n" ..
+                                "<:Leviathan_Heart:1479139581440823327> **Tim Levi:** `" .. GetItem("Leviathan Heart") .. "`\n" ..
+                                "<:Leviathan_Scale:1479139532522786988> **Vảy Levi:** `" .. GetItem("Leviathan Scale") .. "`\n" ..
+                                "<:Mythical_Scroll:1442773244603007106> **Mythical:** `" .. GetItem("Mythical Scroll") .. "`\n" ..
+                                "<:Legendary_Scroll:1442773297623334982> **Legendary:** `" .. GetItem("Legendary Scroll") .. "`\n" ..
+                                "━━━━━━━━━━━━━━━━━━━━━━━━",
+                    ["inline"] = false
+                }
+            },
+            ["footer"] = {
+                ["text"] = "Cập nhật lúc: " .. os.date("%H:%M:%S") .. " | Item Tracker",
+                ["icon_url"] = "https://raw.githubusercontent.com/TrongNguyenn1/Logo/main/H4XShop.png"
+            }
+        }}
+    }
+
+    local req = (syn and syn.request) or (http and http.request) or http_request or request
+    
+    local url = (MessageID and MessageID ~= "") and (WebhookURL .. "/messages/" .. MessageID) or (WebhookURL .. "?wait=true")
+    local method = (MessageID and MessageID ~= "") and "PATCH" or "POST"
+
+    if req then
+        local success, res = pcall(function()
+            return req({
+                Url = url,
+                Method = method,
+                Headers = {["Content-Type"] = "application/json"},
+                Body = HttpService:JSONEncode(data)
+            })
+        end)
+        
+        if success and res and res.Success then
+            if not MessageID or MessageID == "" then
+                local responseData = HttpService:JSONDecode(res.Body)
+                MessageID = responseData.id
+                if writefile then
+                    writefile(FileName, MessageID)
+                end
+            end
+        elseif success and res and not res.Success and MessageID then
+            MessageID = nil
+            if delfile and isfile(FileName) then delfile(FileName) end
+        end
+    end
+end
+
+task.spawn(function()
+    while true do 
+        Send() 
+        task.wait(UpdateInterval) 
+    end
+end)
