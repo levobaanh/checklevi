@@ -15,7 +15,7 @@ player.Data:WaitForChild("Level", 9e9)
 -- [Cấu hình người dùng]
 local WebhookURL = getgenv().urlwhscrolls
 local UpdateInterval = getgenv().timechscrolls or 60
-local ConfigOwner = "LÊ VÕ BÁ ANH" -- Đã cập nhật theo thông tin cấu hình của bạn
+local ConfigOwner = "LÊ VÕ BÁ ANH"
 
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -35,7 +35,6 @@ local function Format(n)
     return tostring(n):reverse():gsub("...","%0,",(#tostring(n)-1)/3):reverse()
 end
 
--- [FIX 1]: Fetch inventory 1 lần duy nhất để tránh spam Remote Event (chống kick/lag)
 local function GetInventoryData()
     local inventory = {}
     pcall(function()
@@ -47,7 +46,6 @@ local function GetInventoryData()
     return inventory
 end
 
--- [FIX 2]: Sửa lỗi treo quá 24h bị reset giờ
 local function GetUptime()
     local totalSeconds = os.time() - startTime
     local hours = math.floor(totalSeconds / 3600)
@@ -60,7 +58,6 @@ local function Send()
     local fps = math.floor(workspace:GetRealPhysicsFPS())
     local ping = 0
     pcall(function()
-        -- [FIX 3]: Tối ưu cách lấy Ping để không bị lỗi string.split trên executor mới
         ping = math.round(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
     end)
     
@@ -71,7 +68,6 @@ local function Send()
         frag = player.Data.Fragments.Value
     end)
     
-    -- Lấy data túi đồ 1 lần
     local invData = GetInventoryData()
     local leviHeart = invData["Leviathan Heart"] or 0
     local leviScale = invData["Leviathan Scale"] or 0
@@ -85,29 +81,28 @@ local function Send()
             ["color"] = 0x2b2d31,
             ["fields"] = {
                 {
-                    ["name"] = "🖥️ HỆ THỐNG",
-                    ["value"] = "> 🎮 **FPS:** `" .. fps .. "`\n> 📊 **Ping:** `" .. ping .. "ms`\n> ⏳ **Treo:** `" .. GetUptime() .. "`",
+                    ["name"] = "HỆ THỐNG",
+                    ["value"] = "> **FPS:** `" .. fps .. "`\n> **Ping:** `" .. ping .. "ms`\n> **Treo:** `" .. GetUptime() .. "`",
                     ["inline"] = true
                 },
                 {
-                    ["name"] = "👤 NHÂN VẬT",
-                    ["value"] = "> ⭐ **Level:** `" .. Format(level) .. "`\n> 💵 **Beli:** `" .. Format(beli) .. "`\n> 🟣 **Frag:** `" .. Format(frag) .. "`",
+                    ["name"] = "NHÂN VẬT",
+                    ["value"] = "> **Level:** `" .. Format(level) .. "`\n> **Beli:** `" .. Format(beli) .. "`\n> **Frag:** `" .. Format(frag) .. "`",
                     ["inline"] = true
                 },
                 {
-                    ["name"] = "📦 KHO ĐỒ VẬT PHẨM",
+                    ["name"] = "KHO ĐỒ VẬT PHẨM",
                     ["value"] = "━━━━━━━━━━━━━━━━━━━━━━━━\n" ..
-                                "<:Leviathan_Heart:1479139581440823327> **Tim Levi:** `" .. leviHeart .. "`\n" ..
-                                "<:Leviathan_Scale:1479139532522786988> **Vảy Levi:** `" .. leviScale .. "`\n" ..
-                                "<:Mythical_Scroll:1442773244603007106> **Mythical:** `" .. mythicScroll .. "`\n" ..
-                                "<:Legendary_Scroll:1442773297623334982> **Legendary:** `" .. legendScroll .. "`\n" ..
+                                "**Tim Levi:** `" .. leviHeart .. "`\n" ..
+                                "**Vảy Levi:** `" .. leviScale .. "`\n" ..
+                                "**Mythical:** `" .. mythicScroll .. "`\n" ..
+                                "**Legendary:** `" .. legendScroll .. "`\n" ..
                                 "━━━━━━━━━━━━━━━━━━━━━━━━",
                     ["inline"] = false
                 }
             },
             ["footer"] = {
-                ["text"] = "Cập nhật lúc: " .. os.date("%H:%M:%S") .. " | Config by " .. ConfigOwner,
-                ["icon_url"] = "https://raw.githubusercontent.com/TrongNguyenn1/Logo/main/H4XShop.png"
+                ["text"] = "Cập nhật lúc: " .. os.date("%H:%M:%S") .. " | Config by " .. ConfigOwner
             }
         }}
     }
@@ -138,7 +133,6 @@ local function Send()
                 end
             end
         elseif success and res and not res.Success and MessageID then
-            -- [FIX 4]: Nếu tin nhắn Webhook bị xoá (lỗi 404), kịch bản sẽ tự động tạo tin nhắn mới thay vì lỗi vĩnh viễn
             if res.StatusCode == 404 then
                 MessageID = nil
                 if delfile and isfile(FileName) then delfile(FileName) end
