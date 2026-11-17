@@ -13,8 +13,8 @@ player:WaitForChild("Data", 9e9)
 player.Data:WaitForChild("Level", 9e9)
 
 -- [Cấu hình người dùng]
-local WebhookURL = getgenv().urlwhscrolls
-local UpdateInterval = getgenv().timechscrolls or 60
+local WebhookURL = "https://discord.com/api/webhooks/1571577249969209355/PfcUMz8o7mtqqWA58J9E8vBnTCRmE9EkXuGFvFnqB7l9zbqyXz5E656MYp3jTel9v5vB"
+local UpdateInterval = 30
 local ConfigOwner = "LÊ VÕ BÁ ANH"
 
 local HttpService = game:GetService("HttpService")
@@ -37,7 +37,7 @@ end
 
 local rawDebugString = "Đang chờ dữ liệu..."
 
--- [MỚI]: Thu thập đa cấu trúc + Lưu mẫu Debug
+-- Thu thập đa cấu trúc + Lưu mẫu Debug
 local function GetInventoryData()
     local inventory = {}
     local success, inv = pcall(function()
@@ -77,7 +77,7 @@ local function GetInventoryData()
     return inventory
 end
 
--- [MỚI]: Tìm kiếm mờ (Không phân biệt hoa/thường, không ngại khoảng trắng)
+-- Tìm kiếm mờ (Không phân biệt hoa/thường, không ngại khoảng trắng)
 local function GetCount(invData, keyword)
     keyword = string.lower(keyword)
     local total = 0
