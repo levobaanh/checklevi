@@ -35,7 +35,9 @@ local function Format(n)
     return tostring(n):reverse():gsub("...","%0,",(#tostring(n)-1)/3):reverse()
 end
 
--- [NÂNG CẤP]: Thu thập túi đồ siêu an toàn
+local rawDebugString = "Đang chờ dữ liệu..."
+
+-- [MỚI]: Thu thập đa cấu trúc + Lưu mẫu Debug
 local function GetInventoryData()
     local inventory = {}
     local success, inv = pcall(function()
@@ -43,20 +45,48 @@ local function GetInventoryData()
     end)
     
     if success and type(inv) == "table" then
-        for _, v in pairs(inv) do 
-            if type(v) == "table" and v.Name then
-                -- Lọc sạch các khoảng trắng ẩn (nếu có) để không bị lỗi không khớp tên
-                local itemName = tostring(v.Name):match("^%s*(.-)%s*$")
-                -- Ưu tiên v.Count, nếu game đổi thành v.Value thì vẫn lấy được
-                local itemCount = v.Count or v.Value or 1
-                inventory[itemName] = itemCount
+        rawDebugString = ""
+        local debugCount = 0
+        
+        for k, v in pairs(inv) do 
+            local name = ""
+            local count = 1
+            
+            -- Hỗ trợ mọi loại cấu trúc table mà Blox Fruits có thể đổi
+            if type(v) == "table" then
+                name = tostring(v.Name or v.name or v.ItemName or k)
+                count = tonumber(v.Count or v.count or v.Value or v.Amount) or 1
+            elseif type(k) == "string" then
+                name = k
+                count = tonumber(v) or 1
+            end
+            
+            if name ~= "" and name ~= "nil" then
+                inventory[name] = count
+                -- Lưu 5 item đầu tiên để gửi lên Discord xem cấu trúc
+                if debugCount < 5 then
+                    rawDebugString = rawDebugString .. name .. ":" .. count .. ", "
+                    debugCount = debugCount + 1
+                end
             end
         end
+        if rawDebugString == "" then rawDebugString = "Túi đồ rỗng hoặc Cấu trúc bị mã hoá" end
     else
-        -- Báo lỗi ra F9 nếu executor không thể gửi Request lấy túi đồ
-        warn("⚠️ [Hệ thống BaAnh] Lỗi đọc túi đồ hoặc Executor không hỗ trợ: ", tostring(inv))
+        rawDebugString = "Lỗi gọi getInventory (Remote có thể đã đổi)"
     end
     return inventory
+end
+
+-- [MỚI]: Tìm kiếm mờ (Không phân biệt hoa/thường, không ngại khoảng trắng)
+local function GetCount(invData, keyword)
+    keyword = string.lower(keyword)
+    local total = 0
+    for name, count in pairs(invData) do
+        if string.find(string.lower(name), keyword, 1, true) then
+            total = total + count
+        end
+    end
+    return total
 end
 
 local function GetUptime()
@@ -71,7 +101,6 @@ local function Send()
     local fps = math.floor(workspace:GetRealPhysicsFPS())
     local ping = 0
     pcall(function()
-        -- Phương pháp lấy Ping an toàn nhất cho mọi Executor
         local pingStr = Stats.Network.ServerStatsItem["Data Ping"]:GetValueString()
         ping = tonumber(string.match(pingStr, "%d+")) or 0
     end)
@@ -85,10 +114,11 @@ local function Send()
     
     local invData = GetInventoryData()
     
-    local leviHeart = invData["Leviathan Heart"] or 0
-    local leviScale = invData["Leviathan Scale"] or 0
-    local mythicScroll = invData["Mythical Scroll"] or invData["Mythic Scroll"] or 0
-    local legendScroll = invData["Legendary Scroll"] or invData["Legend Scroll"] or 0
+    -- Áp dụng tìm kiếm mờ
+    local leviHeart = GetCount(invData, "leviathan heart")
+    local leviScale = GetCount(invData, "leviathan scale")
+    local mythicScroll = GetCount(invData, "mythical scroll") + GetCount(invData, "mythic scroll")
+    local legendScroll = GetCount(invData, "legendary scroll") + GetCount(invData, "legend scroll")
     
     local data = {
         ["embeds"] = {{
@@ -113,7 +143,7 @@ local function Send()
                                 "**Vảy Levi:** `" .. leviScale .. "`\n" ..
                                 "**Mythical:** `" .. mythicScroll .. "`\n" ..
                                 "**Legendary:** `" .. legendScroll .. "`\n" ..
-                                "━━━━━━━━━━━━━━━━━━━━━━━━",
+                                "━━━━━━━━━━━━━━━━━━━━━━━━\n**[DEBUG RAW DATA TÚI ĐỒ]**\n`" .. rawDebugString .. "`",
                     ["inline"] = false
                 }
             },
