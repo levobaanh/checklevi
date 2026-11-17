@@ -35,12 +35,17 @@ local function Format(n)
     return tostring(n):reverse():gsub("...","%0,",(#tostring(n)-1)/3):reverse()
 end
 
+-- Đã sửa lỗi vòng lặp: Kiểm tra an toàn xem vật phẩm có tồn tại thuộc tính Name hay không
 local function GetInventoryData()
     local inventory = {}
     pcall(function()
         local inv = CommF:InvokeServer("getInventory")
-        for _, v in pairs(inv or {}) do 
-            inventory[v.Name] = v.Count
+        if type(inv) == "table" then
+            for _, v in pairs(inv) do 
+                if type(v) == "table" and v.Name then
+                    inventory[v.Name] = v.Count or 1
+                end
+            end
         end
     end)
     return inventory
@@ -69,10 +74,11 @@ local function Send()
     end)
     
     local invData = GetInventoryData()
+    -- Lấy vật phẩm an toàn hơn, hỗ trợ cả các tên gọi thay thế nếu game đổi tên
     local leviHeart = invData["Leviathan Heart"] or 0
     local leviScale = invData["Leviathan Scale"] or 0
-    local mythicScroll = invData["Mythical Scroll"] or 0
-    local legendScroll = invData["Legendary Scroll"] or 0
+    local mythicScroll = invData["Mythical Scroll"] or invData["Mythic Scroll"] or 0
+    local legendScroll = invData["Legendary Scroll"] or invData["Legend Scroll"] or 0
     
     local data = {
         ["embeds"] = {{
