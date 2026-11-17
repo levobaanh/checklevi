@@ -35,19 +35,27 @@ local function Format(n)
     return tostring(n):reverse():gsub("...","%0,",(#tostring(n)-1)/3):reverse()
 end
 
--- Đã sửa lỗi vòng lặp: Kiểm tra an toàn xem vật phẩm có tồn tại thuộc tính Name hay không
+-- [NÂNG CẤP]: Thu thập túi đồ siêu an toàn
 local function GetInventoryData()
     local inventory = {}
-    pcall(function()
-        local inv = CommF:InvokeServer("getInventory")
-        if type(inv) == "table" then
-            for _, v in pairs(inv) do 
-                if type(v) == "table" and v.Name then
-                    inventory[v.Name] = v.Count or 1
-                end
+    local success, inv = pcall(function()
+        return CommF:InvokeServer("getInventory")
+    end)
+    
+    if success and type(inv) == "table" then
+        for _, v in pairs(inv) do 
+            if type(v) == "table" and v.Name then
+                -- Lọc sạch các khoảng trắng ẩn (nếu có) để không bị lỗi không khớp tên
+                local itemName = tostring(v.Name):match("^%s*(.-)%s*$")
+                -- Ưu tiên v.Count, nếu game đổi thành v.Value thì vẫn lấy được
+                local itemCount = v.Count or v.Value or 1
+                inventory[itemName] = itemCount
             end
         end
-    end)
+    else
+        -- Báo lỗi ra F9 nếu executor không thể gửi Request lấy túi đồ
+        warn("⚠️ [Hệ thống BaAnh] Lỗi đọc túi đồ hoặc Executor không hỗ trợ: ", tostring(inv))
+    end
     return inventory
 end
 
@@ -63,7 +71,9 @@ local function Send()
     local fps = math.floor(workspace:GetRealPhysicsFPS())
     local ping = 0
     pcall(function()
-        ping = math.round(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+        -- Phương pháp lấy Ping an toàn nhất cho mọi Executor
+        local pingStr = Stats.Network.ServerStatsItem["Data Ping"]:GetValueString()
+        ping = tonumber(string.match(pingStr, "%d+")) or 0
     end)
     
     local level, beli, frag = 0, 0, 0
@@ -74,7 +84,7 @@ local function Send()
     end)
     
     local invData = GetInventoryData()
-    -- Lấy vật phẩm an toàn hơn, hỗ trợ cả các tên gọi thay thế nếu game đổi tên
+    
     local leviHeart = invData["Leviathan Heart"] or 0
     local leviScale = invData["Leviathan Scale"] or 0
     local mythicScroll = invData["Mythical Scroll"] or invData["Mythic Scroll"] or 0
